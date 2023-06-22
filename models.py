@@ -4,7 +4,6 @@ from torch_geometric.nn import GCNConv
 # from torch_geometric.nn import global_mean_pool
 # import torch.nn.functional as F
 
-
 class simple_GCN(torch.nn.Module):
     def __init__(self, activation, hidden_channels, num_features=128, num_classes=40):
         super().__init__()

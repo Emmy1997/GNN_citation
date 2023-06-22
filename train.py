@@ -9,7 +9,6 @@ from visualize import GraphVisualization
 from models import GCN
 from dataset import HW3Dataset
 
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 use_wandb = True #@param {type:"boolean"}
