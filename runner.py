@@ -10,8 +10,8 @@ def sweep_entry():
         "parameters": {
             "lr": {"min": 0.0001, "max": 0.1},
             "hidden_channels": {"values": [16, 32, 64, 128]},
-            "num_epochs": {"value": 50},
-            "num_layers": {"values": [2,3,4,5]},
+            "num_epochs": {"value": 350},
+            "num_layers": {"values": [3,4,5,6]},
             "activation": {"values": ["relu", "tanh"]}
         }
     }
@@ -25,7 +25,8 @@ def sweep_entry():
             "lr": 0.01,
             "hidden_channels": 64,
             "num_epochs": 10,
-            "num_layers": 3
+            "num_layers": 3,
+            "activation": "relu"
         }
 
         # Initialize Wandb run
