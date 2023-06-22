@@ -1,12 +1,11 @@
 import torch
-from torch.nn import Linear
+from torch.nn import Linear, ReLU, Tanh
 from torch_geometric.nn import GCNConv
-from torch_geometric.nn import global_mean_pool
-import torch.nn.functional as F
+# from torch_geometric.nn import global_mean_pool
+# import torch.nn.functional as F
 
-
-class GCN(torch.nn.Module):
-    def __init__(self, hidden_channels, num_features=128, num_classes=40):
+class simple_GCN(torch.nn.Module):
+    def __init__(self, activation, hidden_channels, num_features=128, num_classes=40):
         super().__init__()
         torch.manual_seed(1234)
         self.hidden_channels = hidden_channels
@@ -14,14 +13,15 @@ class GCN(torch.nn.Module):
         self.conv2 = GCNConv(hidden_channels, hidden_channels)
         self.conv3 = GCNConv(hidden_channels, hidden_channels)
         self.classifier = Linear(hidden_channels, num_classes)
+        self.activation = ReLU() if activation == 'relu' else Tanh
 
     def forward(self, x, edge_index):
         h = self.conv1(x, edge_index)
-        h = h.tanh()
+        h = self.activation(h)
         h = self.conv2(h, edge_index)
-        h = h.tanh()
+        h = self.activation(h)
         h = self.conv3(h, edge_index)
-        h = h.tanh()  # Final GNN embedding space.
+        h = self.activation(h)
 
         # advanced
         # 2. Readout layer
@@ -31,5 +31,32 @@ class GCN(torch.nn.Module):
         # x = F.dropout(x, p=0.5, training=self.training)
 
         # Apply a final (linear) classifier.
+        out = self.classifier(h)
+        return out, h
+
+
+class GCN(torch.nn.Module):
+    def __init__(self, activation, hidden_channels, num_layers=3, num_features=128, num_classes=40):
+        super().__init__()
+        torch.manual_seed(1234)
+        self.hidden_channels = hidden_channels
+        self.num_layers = num_layers
+        self.convs = torch.nn.ModuleList()
+        self.activations = torch.nn.ModuleList()
+
+        self.convs.append(GCNConv(num_features, hidden_channels))
+        for _ in range(num_layers-1):
+            self.convs.append(GCNConv(hidden_channels, hidden_channels))
+
+        for _ in range(num_layers):
+            self.activations.append(ReLU() if activation == 'relu' else Tanh())
+
+        self.classifier = Linear(hidden_channels, num_classes)
+
+    def forward(self, x, edge_index):
+        h = x
+        for i in range(self.num_layers):
+            h = self.convs[i](h, edge_index)
+            h = self.activations[i](h)
         out = self.classifier(h)
         return out, h
