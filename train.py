@@ -1,6 +1,6 @@
 import json
-import plotly
 import wandb
+import plotly
 import torch
 from torch_geometric.utils import to_networkx
 import networkx as nx
@@ -66,7 +66,7 @@ val_mask = data.val_mask
 #     print(data_)
 #     print()
 # hyperparameters
-num_epochs = 10
+num_epochs = 150
 lr = 0.01
 
 
@@ -75,7 +75,7 @@ if use_wandb:
     wandb.init(project="GNN_citation")
     wandb.use_artifact("emmyabitbul/GNN_citation/MUTAG:v0")
 
-model = GCN(hidden_channels=64)
+model = GCN(activation='tanh', hidden_channels=64)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # Define optimizer.
 
