@@ -15,7 +15,7 @@ class GCN(torch.nn.Module):
         self.conv3 = GCNConv(hidden_channels, hidden_channels)
         self.classifier = Linear(hidden_channels, num_classes)
 
-    def forward(self, x, edge_index, batch):
+    def forward(self, x, edge_index):
         h = self.conv1(x, edge_index)
         h = h.tanh()
         h = self.conv2(h, edge_index)
@@ -25,7 +25,7 @@ class GCN(torch.nn.Module):
 
         # advanced
         # 2. Readout layer
-        h = global_mean_pool(h, batch)  # [batch_size, hidden_channels]
+        # h = global_mean_pool(h)  # [batch_size, hidden_channels]
         #
         # 3. Apply a final classifier
         # x = F.dropout(x, p=0.5, training=self.training)

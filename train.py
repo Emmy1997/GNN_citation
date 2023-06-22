@@ -1,23 +1,11 @@
-# General imports
 import json
-
-# Data science imports
 import plotly
-
-# Import Weights & Biases for Experiment Tracking
 import wandb
-
-# Graph imports
 import torch
 from torch_geometric.utils import to_networkx
-from torch_geometric.data import Data
-
-
 import networkx as nx
 from tqdm.auto import trange
 from visualize import GraphVisualization
-
-# internal files
 from models import GCN
 from dataset import HW3Dataset
 
@@ -69,14 +57,7 @@ if use_wandb:
 train_mask = data.train_mask
 val_mask = data.val_mask
 
-train_dataset = dataset[:max(train_mask)]
-val_dataset = dataset[max(train_mask):]
 
-
-from torch_geometric.loader import DataLoader
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
 
 # for step, data_ in enumerate(train_loader):
 #     print(f'Step {step + 1}:')
@@ -85,11 +66,9 @@ val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
 #     print(data_)
 #     print()
 # hyperparameters
-num_epochs = 2
+num_epochs = 10
 lr = 0.01
 
-wandb_project = "intro_to_pyg" #@param {type:"string"}
-wandb_run_name = "upload_and_analyze_dataset" #@param {type:"string"}
 
 # Initialize W&B run for training
 if use_wandb:
@@ -100,47 +79,47 @@ model = GCN(hidden_channels=64)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # Define optimizer.
 
-def train():
+def training():
     model.train()
 
-    for data_batch in train_loader:  # Iterate in batches over the training dataset.
-        out, h = model(data_batch.x, data_batch.edge_index, data_batch.batch)  # Perform a single forward pass.
-        loss = criterion(out, data_batch.y.reshape(-1))  # Compute the loss.
-        loss.backward()  # Derive gradients.
-        optimizer.step()  # Update parameters based on gradients.
-        optimizer.zero_grad()  # Clear gradients.
+    out, h = model(data.x, data.edge_index)  # Perform a single forward pass.
+    loss = criterion(out[train_mask], data.y[train_mask].reshape(-1))
+    loss.backward()  # Derive gradients.
+    optimizer.step()  # Update parameters based on gradients.
+    optimizer.zero_grad()  # Clear gradients.
+    return loss, h
 
-def test(loader, create_table=False):
+
+def validation(create_table=False):
     model.eval()
     table = wandb.Table(columns=['graph', 'ground truth', 'prediction']) if use_wandb else None
-    correct = 0
-    loss_ = 0
-    for data_batch in loader:  # Iterate in batches over the training/test dataset.
-        out = model(data_batch.x, data_batch.edge_index, data_batch.batch)
-        loss = criterion(out, data_batch.y)
-        loss_ += loss.item()
-        pred = out.argmax(dim=1)  # Use the class with highest probability.
+    out, h = model(data.x, data.edge_index)  # Perform a single forward pass.
+    val_loss = criterion(out[val_mask], data.y[val_mask].reshape(-1))
+    val_loss_ = val_loss.item()
+    pred = out.argmax(dim=1)  # Use the class with highest probability.
+    pred_train, pred_val = pred[train_mask], pred[val_mask]
+    if create_table and use_wandb:
+        table.add_data(wandb.Html(plotly.io.to_html(create_graph(data))), data.y.item(), pred.item())
 
-        if create_table and use_wandb:
-            table.add_data(wandb.Html(plotly.io.to_html(create_graph(data_batch))), data_batch.y.item(), pred.item())
+    acc_train = int((pred_train == data.y[train_mask]).sum()) / len(data.y[train_mask])  # Check against ground-truth labels.
+    acc_val = int((pred_val == data.y[val_mask]).sum()) / len(data.y[val_mask])  # Check against ground-truth labels.
 
-        correct += int((pred == data_batch.y).sum())  # Check against ground-truth labels.
-    return correct / len(loader.dataset), loss_ / len(loader.dataset), table  # Derive ratio of correct predictions.
+    return acc_train, acc_val, val_loss_, table  # Derive ratio of correct predictions.
 
 
 for epoch in trange(1, num_epochs):
-    train()
-    train_acc, train_loss, _ = test(train_loader)
-    test_acc, test_loss, test_table = test(val_loader, create_table=True)
+    train_loss, h = training()
+    train_acc, val_acc, val_loss, val_table = validation()
+
 
     # Log metrics to W&B
     if use_wandb:
         wandb.log({
             "train/loss": train_loss,
             "train/acc": train_acc,
-            "test/acc": test_acc,
-            "test/loss": test_loss,
-            "test/table": test_table
+            "val/acc": val_acc,
+            "val/loss": val_loss,
+            "val/table": val_table
         })
 
     torch.save(model, "graph_classification_model.pt")
