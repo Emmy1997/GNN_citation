@@ -93,16 +93,18 @@ def training():
 def validation(create_table=False):
     model.eval()
     table = wandb.Table(columns=['graph', 'ground truth', 'prediction']) if use_wandb else None
-    out, h = model(data.x, data.edge_index)  # Perform a single forward pass.
-    val_loss = criterion(out[val_mask], data.y[val_mask].reshape(-1))
+    out, h = model(data.x, data.edge_index)
+    y_train, y_val = data.y[train_mask].reshape(-1), data.y[val_mask].reshape(-1)# Perform a single forward pass.
+    val_loss = criterion(out[val_mask], y_val)
     val_loss_ = val_loss.item()
     pred = out.argmax(dim=1)  # Use the class with highest probability.
     pred_train, pred_val = pred[train_mask], pred[val_mask]
     if create_table and use_wandb:
         table.add_data(wandb.Html(plotly.io.to_html(create_graph(data))), data.y.item(), pred.item())
+    len_val, len_train = len(data.y[val_mask]), len(data.y[train_mask])
 
-    acc_train = int((pred_train == data.y[train_mask]).sum()) / len(data.y[train_mask])  # Check against ground-truth labels.
-    acc_val = int((pred_val == data.y[val_mask]).sum()) / len(data.y[val_mask])  # Check against ground-truth labels.
+    acc_train = int((y_train == pred_train).sum()) / len_train  # Check against ground-truth labels.
+    acc_val = int((pred_val == y_val).sum()) / len_val  # Check against ground-truth labels.
 
     return acc_train, acc_val, val_loss_, table  # Derive ratio of correct predictions.
 
