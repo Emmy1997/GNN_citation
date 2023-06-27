@@ -2,18 +2,18 @@
 # Helper function for visualization.
 import networkx as nx
 import matplotlib.pyplot as plt
-from visualize import GraphVisualization
+# from visualize import GraphVisualization
 from torch_geometric.utils import to_networkx
 
 
-def create_graph(graph):
-    g = to_networkx(graph)
-    pos = nx.spring_layout(g)
-    vis = GraphVisualization(
-        g, pos, node_text_position='top left', node_size=20,
-    )
-    fig = vis.create_figure()
-    return fig
+# def create_graph(graph):
+#     g = to_networkx(graph)
+#     pos = nx.spring_layout(g)
+#     vis = GraphVisualization(
+#         g, pos, node_text_position='top left', node_size=20,
+#     )
+#     fig = vis.create_figure()
+#     return fig
 
 
 def visualize_graph(G, color):
